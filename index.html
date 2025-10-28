@@ -92,23 +92,17 @@ header button:hover { background: #333; transform: translateY(-2px) scale(1.05);
   transition:0.3s;
 }
 #prompt:focus { border-color:#00a67e; outline:none; box-shadow:0 0 16px #00a67e44; }
-#send, #skipBtn {
-  margin-left:10px;
-  border:none;
-  border-radius:10px;
-  color:white;
-  padding:0 18px;
-  font-size:1rem;
-  cursor:pointer;
-  transition:all 0.2s;
-  box-shadow:0 3px 12px rgba(0,0,0,0.4);
-}
+
+button { margin-left:10px; border:none; border-radius:10px; color:white; padding:0 18px; font-size:1rem; cursor:pointer; transition:all 0.2s; box-shadow:0 3px 12px rgba(0,0,0,0.4);}
 #send { background: linear-gradient(145deg,#00a67e,#009971); }
 #send:hover { background:#00c291; transform:translateY(-1px); }
 #send:disabled { opacity:0.5; cursor:not-allowed; }
 
 #skipBtn { background:#444; }
 #skipBtn:hover { background:#666; }
+
+#clearBtn { background:#aa2222; }
+#clearBtn:hover { background:#cc3333; }
 
 #apiModal { position:fixed; inset:0; background: rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:1000; opacity:0; animation:fadeIn 0.6s forwards;}
 #apiModal div { background:#111; padding:28px; border-radius:15px; width:90%; max-width:500px; text-align:left; box-shadow:0 12px 45px rgba(0,0,0,0.6);}
@@ -138,6 +132,7 @@ ol { padding-left:20px; margin:10px 0; }
   <textarea id="prompt" rows="1" placeholder="Type your message..."></textarea>
   <button id="send" disabled>Send</button>
   <button id="skipBtn">Skip Animation</button>
+  <button id="clearBtn">Clear Chat</button>
 </div>
 
 <div id="apiModal" style="display:none;">
@@ -162,6 +157,7 @@ const chat=document.getElementById('chat');
 const promptInput=document.getElementById('prompt');
 const sendBtn=document.getElementById('send');
 const skipBtn=document.getElementById('skipBtn');
+const clearBtn=document.getElementById('clearBtn');
 const apiModal=document.getElementById('apiModal');
 const apiKeyInput=document.getElementById('apiKeyInput');
 const saveKeyBtn=document.getElementById('saveKey');
@@ -287,6 +283,14 @@ async function sendMessage(){
 
 // Skip button functionality
 skipBtn.onclick=()=>{ if(currentTypeWriter) currentTypeWriter.skip(); };
+
+// Clear chat button functionality
+clearBtn.onclick=()=>{
+  if(confirm("Are you sure you want to clear the chat?")){
+    chat.innerHTML='';
+    localStorage.removeItem('chatHistory');
+  }
+};
 
 sendBtn.onclick=sendMessage;
 promptInput.addEventListener('keypress',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}});
