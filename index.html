@@ -35,7 +35,7 @@ header button {
   background: #1c1c1c;
   color: #e6e6e6;
   border: 1px solid #333;
-  border-radius: 10px;
+  border-radius: 10px; /* rounded corners restored */
   padding: 6px 12px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -93,15 +93,16 @@ header button:hover { background: #333; transform: translateY(-2px) scale(1.05);
 }
 #prompt:focus { border-color:#00a67e; outline:none; box-shadow:0 0 16px #00a67e44; }
 
-button { margin-left:10px; border:none; border-radius:10px; color:white; padding:0 18px; font-size:1rem; cursor:pointer; transition:all 0.2s; box-shadow:0 3px 12px rgba(0,0,0,0.4);}
-#send { background: linear-gradient(145deg,#00a67e,#009971); }
+/* Bigger, rounded action buttons */
+button { margin-left:10px; border:none; border-radius:10px; color:white; padding:10px 20px; font-size:1rem; cursor:pointer; transition:all 0.2s; box-shadow:0 3px 12px rgba(0,0,0,0.4);}
+#send { background: linear-gradient(145deg,#00a67e,#009971); font-size:1.1rem; padding:12px 24px; }
 #send:hover { background:#00c291; transform:translateY(-1px); }
 #send:disabled { opacity:0.5; cursor:not-allowed; }
 
-#skipBtn { background:#444; }
+#skipBtn { background:#444; font-size:1.1rem; padding:12px 24px; }
 #skipBtn:hover { background:#666; }
 
-#clearBtn { background:#aa2222; }
+#clearBtn { background:#aa2222; font-size:1.1rem; padding:12px 24px; }
 #clearBtn:hover { background:#cc3333; }
 
 #apiModal { position:fixed; inset:0; background: rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:1000; opacity:0; animation:fadeIn 0.6s forwards;}
@@ -242,7 +243,6 @@ async function sendMessage(){
   botMsg.className='msg bot';
   chat.appendChild(botMsg);
 
-  // Pop-out effect
   botMsg.style.transform='translateY(0) translateZ(-50px)';
   setTimeout(()=>{ botMsg.style.transform='translateY(0) translateZ(0)'; }, 50);
 
@@ -254,20 +254,20 @@ async function sendMessage(){
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
       body:JSON.stringify({model:'gpt-4o-mini', messages:[{role:'user',content:text}]})
     });
-    const data=await response.json();
-    let botText;
-    if(response.status===401 || data.error?.message?.toLowerCase().includes('invalid')){
-      botText='(No response from model — make sure you used a valid API key. To change yours, click the button in the top right corner.)';
+    let botText='';
+    if(response.status===401){
+      botText='(Invalid API key — please check or change it using the button in the top right corner.)';
+    } else if(response.status===429){
+      botText='(Rate limit exceeded — try again later.)';
     } else {
+      const data=await response.json();
       botText=decodeHtmlEntities(
         marked.parse(data.choices?.[0]?.message?.content || 
-          '(No response from model — make sure you used a valid API key. To change yours, click the button in the top right corner.)'
+          '(No response from model — unknown error)'
         ).replace(/<\/?[^>]+(>|$)/g,"")
       );
     }
-
     currentTypeWriter=typeWriter(botMsg, botText, 25);
-
   }catch(err){ botMsg.textContent='Error: '+err.message; }
 
   // save chat
@@ -281,17 +281,8 @@ async function sendMessage(){
   sendBtn.disabled=false;
 }
 
-// Skip button functionality
 skipBtn.onclick=()=>{ if(currentTypeWriter) currentTypeWriter.skip(); };
-
-// Clear chat button functionality
-clearBtn.onclick=()=>{
-  if(confirm("Are you sure you want to clear the chat?")){
-    chat.innerHTML='';
-    localStorage.removeItem('chatHistory');
-  }
-};
-
+clearBtn.onclick=()=>{ if(confirm("Are you sure you want to clear the chat?")){ chat.innerHTML=''; localStorage.removeItem('chatHistory'); } };
 sendBtn.onclick=sendMessage;
 promptInput.addEventListener('keypress',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}});
 </script>
