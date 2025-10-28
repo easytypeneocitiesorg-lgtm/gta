@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Smooth GPT-5 Mini Chat</title>
+<title>3D Smooth GPT-4o Mini Chat</title>
 <style>
   body {
     margin: 0;
@@ -16,6 +16,7 @@
     perspective: 1200px;
     overflow: hidden;
   }
+
   header {
     display: flex;
     justify-content: space-between;
@@ -52,6 +53,7 @@
     gap: 18px;
     transform: rotateX(3deg) translateZ(20px);
     scroll-behavior: smooth;
+    perspective: 1200px;
   }
 
   .msg {
@@ -62,8 +64,9 @@
     white-space: pre-wrap;
     box-shadow: 0 3px 12px rgba(0,0,0,0.3);
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(10px) translateZ(0);
     animation: fadeSlideIn 0.5s forwards;
+    transition: transform 0.2s ease-out;
   }
   .user { align-self: flex-end; background: linear-gradient(145deg,#00a67e,#007d63); color:white; border:1px solid #008f72;}
   .bot { align-self: flex-start; background:#1e1e1e; border:1px solid #333;}
@@ -101,13 +104,13 @@
   a { color:#00a67e; text-decoration:none; }
   ol { padding-left:20px; margin:10px 0; }
 
-  @keyframes fadeSlideIn { 0% {opacity:0; transform:translateY(10px);} 100% {opacity:1; transform:translateY(0);} }
+  @keyframes fadeSlideIn { 0% {opacity:0; transform:translateY(10px) translateZ(0);} 100% {opacity:1; transform:translateY(0) translateZ(0);} }
   @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
 </style>
 </head>
 <body>
 <header>
-  <h1>GPT-5 Mini Chatbot</h1>
+  <h1>GPT-4o Mini Chatbot</h1>
   <button id="changeKey">Change API Key</button>
 </header>
 
@@ -165,6 +168,16 @@ function typeWriter(msgEl,text,speed=30){
   nextChar();
 }
 
+// parallax effect
+chat.addEventListener('scroll',()=>{
+  const messages = chat.querySelectorAll('.msg');
+  const scrollTop = chat.scrollTop;
+  messages.forEach((msg,index)=>{
+    const depth = (index - scrollTop/100) * 5; // subtle Z translation
+    msg.style.transform = `translateY(0px) translateZ(${depth}px)`;
+  });
+});
+
 async function sendMessage(){
   const text=promptInput.value.trim();
   if(!text) return;
@@ -190,7 +203,7 @@ async function sendMessage(){
     const response=await fetch('https://api.openai.com/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
-      body:JSON.stringify({model:'gpt-5-mini', messages:[{role:'user',content:text}]})
+      body:JSON.stringify({model:'gpt-4o-mini', messages:[{role:'user',content:text}]})
     });
     const data=await response.json();
     if(response.status===401 || data.error?.message?.toLowerCase().includes('invalid')){
