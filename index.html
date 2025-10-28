@@ -3,112 +3,120 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Smooth GPT-4o Mini Chat</title>
+<title>Hyper-3D GPT-4o Mini Chat</title>
 <style>
-  body {
-    margin: 0;
-    font-family: Inter, system-ui, sans-serif;
-    background: radial-gradient(circle at 50% 30%, #121212, #0b0b0b 80%);
-    color: #e6e6e6;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    perspective: 1200px;
-    overflow: hidden;
-  }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    background: rgba(17,17,17,0.95);
-    border-bottom: 1px solid #222;
-    box-shadow: 0 2px 15px rgba(0,0,0,0.4);
-    transform: translateZ(40px);
-  }
-  header h1 {
-    margin: 0;
-    color: #00a67e;
-    text-shadow: 0 0 10px #00a67e33;
-  }
-  header button {
-    background: #1c1c1c;
-    color: #e6e6e6;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 6px 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  }
-  header button:hover { background: #333; transform: translateY(-1px) scale(1.05); }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: radial-gradient(circle at 50% 30%, #121212, #0b0b0b 80%);
+  color: #e6e6e6;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  perspective: 1600px;
+  overflow: hidden;
+}
 
-  #chat {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-    transform: rotateX(3deg) translateZ(20px);
-    scroll-behavior: smooth;
-    perspective: 1200px;
-  }
-  .msg {
-    max-width: 70%;
-    padding: 14px 16px;
-    border-radius: 10px;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.3);
-    opacity: 0;
-    transform: translateY(10px) translateZ(0);
-    animation: fadeSlideIn 0.5s forwards;
-    transition: transform 0.2s ease-out;
-  }
-  .user { align-self: flex-end; background: linear-gradient(145deg,#00a67e,#007d63); color:white; border:1px solid #008f72;}
-  .bot { align-self: flex-start; background:#1e1e1e; border:1px solid #333;}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: rgba(17,17,17,0.95);
+  border-bottom: 1px solid #222;
+  box-shadow: 0 4px 25px rgba(0,0,0,0.5);
+  transform: translateZ(60px) rotateX(-5deg);
+}
+header h1 {
+  margin: 0;
+  color: #00a67e;
+  text-shadow: 0 0 15px #00a67e55;
+}
+header button {
+  background: #1c1c1c;
+  color: #e6e6e6;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+}
+header button:hover { background: #333; transform: translateY(-2px) scale(1.05); }
 
-  #input-area {
-    display: flex;
-    border-top:1px solid #222;
-    padding:12px;
-    background: rgba(17,17,17,0.95);
-    transform: translateZ(30px);
-    box-shadow: 0 -4px 15px rgba(0,0,0,0.4);
-  }
-  #prompt {
-    flex:1;
-    background: #1a1a1a;
-    color:#eee;
-    border:1px solid #333;
-    border-radius:8px;
-    padding:10px;
-    font-family:inherit;
-    font-size:1rem;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
-    transition:0.3s;
-  }
-  #prompt:focus { border-color:#00a67e; outline:none; box-shadow:0 0 12px #00a67e44; }
-  #send { margin-left:10px; background: linear-gradient(145deg,#00a67e,#009971); border:none; border-radius:8px; color:white; padding:0 18px; font-size:1rem; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.4);}
-  #send:hover { background:#00c291; transform:translateY(-1px); }
-  #send:disabled { opacity:0.5; cursor:not-allowed; }
+#chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  transform: rotateX(5deg) translateZ(20px);
+  perspective: 1600px;
+  scroll-behavior: smooth;
+}
 
-  #apiModal { position:fixed; inset:0; background: rgba(0,0,0,0.75); display:flex; justify-content:center; align-items:center; z-index:1000; opacity:0; animation:fadeIn 0.6s forwards;}
-  #apiModal div { background:#111; padding:22px 25px; border-radius:12px; width:90%; max-width:440px; text-align:left; transform:rotateY(5deg) translateZ(40px); box-shadow:0 8px 30px rgba(0,0,0,0.5);}
-  #apiModal input { width:100%; padding:10px; background:#1a1a1a; border:1px solid #333; color:#eee; border-radius:6px; margin-top:8px;}
-  #apiModal button { margin-top:12px; background:#00a67e; border:none; color:white; padding:10px 20px; border-radius:6px; cursor:pointer; }
+.msg {
+  max-width: 70%;
+  padding: 16px 20px;
+  border-radius: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+  opacity: 0;
+  transform: translateY(30px) rotateX(5deg) rotateY(5deg) translateZ(0);
+  animation: fadeSlideIn 0.5s forwards;
+  transition: transform 0.4s ease-out, opacity 0.4s ease-out, box-shadow 0.4s;
+  display: flex;
+  flex-direction: column;
+  will-change: transform, opacity;
+}
+.user { align-self: flex-end; background: linear-gradient(145deg,#00a67e,#007d63); color:white; border:1px solid #008f72; }
+.bot { align-self: flex-start; background:#1e1e1e; border:1px solid #333; }
 
-  a { color:#00a67e; text-decoration:none; }
-  ol { padding-left:20px; margin:10px 0; }
+#input-area {
+  display: flex;
+  border-top:1px solid #222;
+  padding:12px;
+  background: rgba(17,17,17,0.95);
+  transform: translateZ(50px);
+  box-shadow: 0 -6px 25px rgba(0,0,0,0.5);
+}
+#prompt {
+  flex:1;
+  background: #1a1a1a;
+  color:#eee;
+  border:1px solid #333;
+  border-radius:10px;
+  padding:12px;
+  font-family:inherit;
+  font-size:1rem;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
+  transition:0.3s;
+}
+#prompt:focus { border-color:#00a67e; outline:none; box-shadow:0 0 16px #00a67e44; }
+#send { margin-left:10px; background: linear-gradient(145deg,#00a67e,#009971); border:none; border-radius:10px; color:white; padding:0 18px; font-size:1rem; cursor:pointer; transition:all 0.2s; box-shadow:0 3px 12px rgba(0,0,0,0.4);}
+#send:hover { background:#00c291; transform:translateY(-1px); }
+#send:disabled { opacity:0.5; cursor:not-allowed; }
 
-  @keyframes fadeSlideIn { 0% {opacity:0; transform:translateY(10px) translateZ(0);} 100% {opacity:1; transform:translateY(0) translateZ(0);} }
-  @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+#apiModal { position:fixed; inset:0; background: rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:1000; opacity:0; animation:fadeIn 0.6s forwards;}
+#apiModal div { background:#111; padding:28px; border-radius:15px; width:90%; max-width:500px; text-align:left; transform:rotateY(5deg) rotateX(-3deg) translateZ(60px); box-shadow:0 12px 45px rgba(0,0,0,0.6);}
+#apiModal input { width:100%; padding:12px; background:#1a1a1a; border:1px solid #333; color:#eee; border-radius:8px; margin-top:8px;}
+#apiModal button { margin-top:14px; background:#00a67e; border:none; color:white; padding:10px 22px; border-radius:8px; cursor:pointer; }
+
+a { color:#00a67e; text-decoration:none; }
+ol { padding-left:20px; margin:10px 0; }
+
+@keyframes fadeSlideIn { 
+  0% {opacity:0; transform:translateY(30px) translateZ(0) rotateX(10deg) rotateY(10deg);} 
+  100% {opacity:1; transform:translateY(0) translateZ(0) rotateX(0deg) rotateY(0deg);} 
+}
+@keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
 </style>
 </head>
 <body>
 <header>
-  <h1>GPT-4o Mini Chatbot</h1>
+  <h1>Hyper-3D GPT-4o Mini Chat</h1>
   <button id="changeKey">Change API Key</button>
 </header>
 
@@ -166,21 +174,33 @@ function decodeHtmlEntities(text){
 function typeWriter(msgEl,text,speed=30){
   msgEl.textContent='';
   let i=0;
-  function nextChar(){
-    if(i<text.length){ msgEl.textContent+=text[i]; i++; setTimeout(nextChar,speed); chat.scrollTop=chat.scrollHeight; }
-  }
+  let timeoutId;
+  const nextChar=function(){
+    if(i<text.length){
+      msgEl.textContent+=text[i];
+      i++;
+      timeoutId=setTimeout(nextChar,speed);
+      chat.scrollTop=chat.scrollHeight;
+    }
+  };
   nextChar();
+  return { skip:()=>{ clearTimeout(timeoutId); msgEl.textContent=text; } };
 }
 
-// parallax effect
-chat.addEventListener('scroll',()=>{
+// floating/tilting animation loop
+function animate3D(){
   const messages = chat.querySelectorAll('.msg');
   const scrollTop = chat.scrollTop;
   messages.forEach((msg,index)=>{
-    const depth = (index - scrollTop/100) * 5; 
-    msg.style.transform = `translateY(0px) translateZ(${depth}px)`;
+    const depth = (index - scrollTop/80) * 12;
+    const rotateX = 3*Math.sin(Date.now()/400 + index);
+    const rotateY = 5*Math.sin(Date.now()/500 + index/2);
+    const wiggleZ = 2*Math.sin(Date.now()/300 + index);
+    msg.style.transform = `translateY(0px) translateZ(${depth+wiggleZ}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
   });
-});
+  requestAnimationFrame(animate3D);
+}
+animate3D();
 
 // load saved chat
 window.addEventListener('load',()=>{
@@ -210,8 +230,21 @@ async function sendMessage(){
 
   const botMsg=document.createElement('div');
   botMsg.className='msg bot';
-  botMsg.textContent='...';
   chat.appendChild(botMsg);
+
+  const skipBtn = document.createElement('button');
+  skipBtn.textContent = "Skip Animation";
+  skipBtn.style.marginTop = "6px";
+  skipBtn.style.background = "#444";
+  skipBtn.style.color = "#fff";
+  skipBtn.style.border = "none";
+  skipBtn.style.padding = "4px 10px";
+  skipBtn.style.borderRadius = "4px";
+  skipBtn.style.cursor = "pointer";
+  skipBtn.style.fontSize = "0.85rem";
+  skipBtn.style.alignSelf = "flex-start";
+  botMsg.appendChild(skipBtn);
+
   chat.scrollTop=chat.scrollHeight;
 
   try{
@@ -221,18 +254,22 @@ async function sendMessage(){
       body:JSON.stringify({model:'gpt-4o-mini', messages:[{role:'user',content:text}]})
     });
     const data=await response.json();
+    let botText;
     if(response.status===401 || data.error?.message?.toLowerCase().includes('invalid')){
-      botMsg.textContent='(No response from model — make sure you used a valid API key. To change yours, click the button in the top right corner.)';
+      botText='(No response from model — make sure you used a valid API key. To change yours, click the button in the top right corner.)';
     } else {
-      botMsg.textContent='';
-      typeWriter(botMsg, decodeHtmlEntities(
+      botText=decodeHtmlEntities(
         marked.parse(data.choices?.[0]?.message?.content || 
-        '(No response from model — make sure you used a valid API key. To change yours, click the button in the top right corner.)'
-      ).replace(/<\/?[^>]+(>|$)/g,""))
+          '(No response from model — make sure you used a valid API key. To change yours, click the button in the top right corner.)'
+        ).replace(/<\/?[^>]+(>|$)/g,"")
       );
     }
+
+    const tw = typeWriter(botMsg, botText, 25);
+    skipBtn.onclick = ()=>{ tw.skip(); skipBtn.style.display='none'; };
+
   }catch(err){ botMsg.textContent='Error: '+err.message; }
-  
+
   // save chat
   const chatHistory = Array.from(chat.querySelectorAll('.msg')).map(m=>({
     text:m.textContent,
