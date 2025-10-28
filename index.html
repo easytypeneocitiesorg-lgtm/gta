@@ -25,7 +25,6 @@ header {
   background: rgba(17,17,17,0.95);
   border-bottom: 1px solid #222;
   box-shadow: 0 4px 25px rgba(0,0,0,0.5);
-  transform: translateZ(60px) rotateX(-5deg);
 }
 header h1 {
   margin: 0;
@@ -51,8 +50,6 @@ header button:hover { background: #333; transform: translateY(-2px) scale(1.05);
   display: flex;
   flex-direction: column;
   gap: 22px;
-  transform: rotateX(5deg) translateZ(20px);
-  perspective: 1600px;
   scroll-behavior: smooth;
 }
 
@@ -64,7 +61,7 @@ header button:hover { background: #333; transform: translateY(-2px) scale(1.05);
   white-space: pre-wrap;
   box-shadow: 0 8px 25px rgba(0,0,0,0.6);
   opacity: 0;
-  transform: translateY(30px) rotateX(5deg) rotateY(5deg) translateZ(0);
+  transform: translateY(30px) translateZ(0);
   animation: fadeSlideIn 0.5s forwards;
   transition: transform 0.4s ease-out, opacity 0.4s ease-out, box-shadow 0.4s;
   display: flex;
@@ -79,8 +76,8 @@ header button:hover { background: #333; transform: translateY(-2px) scale(1.05);
   border-top:1px solid #222;
   padding:12px;
   background: rgba(17,17,17,0.95);
-  transform: translateZ(50px);
   box-shadow: 0 -6px 25px rgba(0,0,0,0.5);
+  align-items: center;
 }
 #prompt {
   flex:1;
@@ -95,12 +92,26 @@ header button:hover { background: #333; transform: translateY(-2px) scale(1.05);
   transition:0.3s;
 }
 #prompt:focus { border-color:#00a67e; outline:none; box-shadow:0 0 16px #00a67e44; }
-#send { margin-left:10px; background: linear-gradient(145deg,#00a67e,#009971); border:none; border-radius:10px; color:white; padding:0 18px; font-size:1rem; cursor:pointer; transition:all 0.2s; box-shadow:0 3px 12px rgba(0,0,0,0.4);}
+#send, #skipBtn {
+  margin-left:10px;
+  border:none;
+  border-radius:10px;
+  color:white;
+  padding:0 18px;
+  font-size:1rem;
+  cursor:pointer;
+  transition:all 0.2s;
+  box-shadow:0 3px 12px rgba(0,0,0,0.4);
+}
+#send { background: linear-gradient(145deg,#00a67e,#009971); }
 #send:hover { background:#00c291; transform:translateY(-1px); }
 #send:disabled { opacity:0.5; cursor:not-allowed; }
 
+#skipBtn { background:#444; }
+#skipBtn:hover { background:#666; }
+
 #apiModal { position:fixed; inset:0; background: rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:1000; opacity:0; animation:fadeIn 0.6s forwards;}
-#apiModal div { background:#111; padding:28px; border-radius:15px; width:90%; max-width:500px; text-align:left; transform:rotateY(5deg) rotateX(-3deg) translateZ(60px); box-shadow:0 12px 45px rgba(0,0,0,0.6);}
+#apiModal div { background:#111; padding:28px; border-radius:15px; width:90%; max-width:500px; text-align:left; box-shadow:0 12px 45px rgba(0,0,0,0.6);}
 #apiModal input { width:100%; padding:12px; background:#1a1a1a; border:1px solid #333; color:#eee; border-radius:8px; margin-top:8px;}
 #apiModal button { margin-top:14px; background:#00a67e; border:none; color:white; padding:10px 22px; border-radius:8px; cursor:pointer; }
 
@@ -108,8 +119,9 @@ a { color:#00a67e; text-decoration:none; }
 ol { padding-left:20px; margin:10px 0; }
 
 @keyframes fadeSlideIn { 
-  0% {opacity:0; transform:translateY(30px) translateZ(0) rotateX(10deg) rotateY(10deg);} 
-  100% {opacity:1; transform:translateY(0) translateZ(0) rotateX(0deg) rotateY(0deg);} 
+  0% {opacity:0; transform:translateY(30px) translateZ(-50px);} 
+  50% {transform:translateY(0) translateZ(50px);} 
+  100% {opacity:1; transform:translateY(0) translateZ(0);} 
 }
 @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
 </style>
@@ -125,6 +137,7 @@ ol { padding-left:20px; margin:10px 0; }
 <div id="input-area">
   <textarea id="prompt" rows="1" placeholder="Type your message..."></textarea>
   <button id="send" disabled>Send</button>
+  <button id="skipBtn">Skip Animation</button>
 </div>
 
 <div id="apiModal" style="display:none;">
@@ -148,6 +161,7 @@ ol { padding-left:20px; margin:10px 0; }
 const chat=document.getElementById('chat');
 const promptInput=document.getElementById('prompt');
 const sendBtn=document.getElementById('send');
+const skipBtn=document.getElementById('skipBtn');
 const apiModal=document.getElementById('apiModal');
 const apiKeyInput=document.getElementById('apiKeyInput');
 const saveKeyBtn=document.getElementById('saveKey');
@@ -171,6 +185,8 @@ function decodeHtmlEntities(text){
   return txt.value;
 }
 
+let currentTypeWriter=null;
+
 function typeWriter(msgEl,text,speed=30){
   msgEl.textContent='';
   let i=0;
@@ -187,16 +203,14 @@ function typeWriter(msgEl,text,speed=30){
   return { skip:()=>{ clearTimeout(timeoutId); msgEl.textContent=text; } };
 }
 
-// floating/tilting animation loop
+// floating animation loop
 function animate3D(){
   const messages = chat.querySelectorAll('.msg');
   const scrollTop = chat.scrollTop;
   messages.forEach((msg,index)=>{
     const depth = (index - scrollTop/80) * 12;
-    const rotateX = 3*Math.sin(Date.now()/400 + index);
-    const rotateY = 5*Math.sin(Date.now()/500 + index/2);
     const wiggleZ = 2*Math.sin(Date.now()/300 + index);
-    msg.style.transform = `translateY(0px) translateZ(${depth+wiggleZ}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    msg.style.transform = `translateY(0px) translateZ(${depth+wiggleZ}px)`;
   });
   requestAnimationFrame(animate3D);
 }
@@ -232,18 +246,9 @@ async function sendMessage(){
   botMsg.className='msg bot';
   chat.appendChild(botMsg);
 
-  const skipBtn = document.createElement('button');
-  skipBtn.textContent = "Skip Animation";
-  skipBtn.style.marginTop = "6px";
-  skipBtn.style.background = "#444";
-  skipBtn.style.color = "#fff";
-  skipBtn.style.border = "none";
-  skipBtn.style.padding = "4px 10px";
-  skipBtn.style.borderRadius = "4px";
-  skipBtn.style.cursor = "pointer";
-  skipBtn.style.fontSize = "0.85rem";
-  skipBtn.style.alignSelf = "flex-start";
-  botMsg.appendChild(skipBtn);
+  // Pop-out effect
+  botMsg.style.transform='translateY(0) translateZ(-50px)';
+  setTimeout(()=>{ botMsg.style.transform='translateY(0) translateZ(0)'; }, 50);
 
   chat.scrollTop=chat.scrollHeight;
 
@@ -265,8 +270,7 @@ async function sendMessage(){
       );
     }
 
-    const tw = typeWriter(botMsg, botText, 25);
-    skipBtn.onclick = ()=>{ tw.skip(); skipBtn.style.display='none'; };
+    currentTypeWriter=typeWriter(botMsg, botText, 25);
 
   }catch(err){ botMsg.textContent='Error: '+err.message; }
 
@@ -280,6 +284,9 @@ async function sendMessage(){
   chat.scrollTop=chat.scrollHeight;
   sendBtn.disabled=false;
 }
+
+// Skip button functionality
+skipBtn.onclick=()=>{ if(currentTypeWriter) currentTypeWriter.skip(); };
 
 sendBtn.onclick=sendMessage;
 promptInput.addEventListener('keypress',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}});
