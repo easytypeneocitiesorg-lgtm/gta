@@ -35,7 +35,7 @@ header button {
   background: #1c1c1c;
   color: #e6e6e6;
   border: 1px solid #333;
-  border-radius: 10px; /* rounded corners restored */
+  border-radius: 10px;
   padding: 6px 12px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -183,7 +183,6 @@ function decodeHtmlEntities(text){
 }
 
 let currentTypeWriter=null;
-
 function typeWriter(msgEl,text,speed=30){
   msgEl.textContent='';
   let i=0;
@@ -200,7 +199,7 @@ function typeWriter(msgEl,text,speed=30){
   return { skip:()=>{ clearTimeout(timeoutId); msgEl.textContent=text; } };
 }
 
-// floating animation loop
+// floating 3D messages
 function animate3D(){
   const messages = chat.querySelectorAll('.msg');
   const scrollTop = chat.scrollTop;
@@ -242,18 +241,24 @@ async function sendMessage(){
   const botMsg=document.createElement('div');
   botMsg.className='msg bot';
   chat.appendChild(botMsg);
-
   botMsg.style.transform='translateY(0) translateZ(-50px)';
   setTimeout(()=>{ botMsg.style.transform='translateY(0) translateZ(0)'; }, 50);
-
   chat.scrollTop=chat.scrollHeight;
 
   try{
-    const response=await fetch('https://api.openai.com/v1/chat/completions',{
+    // build conversation history
+    const messages = Array.from(chat.querySelectorAll('.msg')).map(m=>({
+      role: m.classList.contains('user')?'user':'assistant',
+      content: m.textContent
+    }));
+    messages.push({role:'user',content:text});
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
-      body:JSON.stringify({model:'gpt-4o-mini', messages:[{role:'user',content:text}]})
+      body: JSON.stringify({model:'gpt-4o-mini', messages})
     });
+
     let botText='';
     if(response.status===401){
       botText='(Invalid API key — please check or change it using the button in the top right corner.)';
@@ -262,11 +267,11 @@ async function sendMessage(){
     } else {
       const data=await response.json();
       botText=decodeHtmlEntities(
-        marked.parse(data.choices?.[0]?.message?.content || 
-          '(No response from model — unknown error)'
-        ).replace(/<\/?[^>]+(>|$)/g,"")
+        marked.parse(data.choices?.[0]?.message?.content||'(No response from model — unknown error)')
+        .replace(/<\/?[^>]+(>|$)/g,"")
       );
     }
+
     currentTypeWriter=typeWriter(botMsg, botText, 25);
   }catch(err){ botMsg.textContent='Error: '+err.message; }
 
