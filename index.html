@@ -16,7 +16,6 @@
     perspective: 1200px;
     overflow: hidden;
   }
-
   header {
     display: flex;
     justify-content: space-between;
@@ -55,7 +54,6 @@
     scroll-behavior: smooth;
     perspective: 1200px;
   }
-
   .msg {
     max-width: 70%;
     padding: 14px 16px;
@@ -159,6 +157,12 @@ saveKeyBtn.onclick=()=>{
 
 promptInput.addEventListener('input',()=>{ sendBtn.disabled=promptInput.value.trim()===''; });
 
+function decodeHtmlEntities(text){
+  const txt=document.createElement('textarea');
+  txt.innerHTML=text;
+  return txt.value;
+}
+
 function typeWriter(msgEl,text,speed=30){
   msgEl.textContent='';
   let i=0;
@@ -173,9 +177,21 @@ chat.addEventListener('scroll',()=>{
   const messages = chat.querySelectorAll('.msg');
   const scrollTop = chat.scrollTop;
   messages.forEach((msg,index)=>{
-    const depth = (index - scrollTop/100) * 5; // subtle Z translation
+    const depth = (index - scrollTop/100) * 5; 
     msg.style.transform = `translateY(0px) translateZ(${depth}px)`;
   });
+});
+
+// load saved chat
+window.addEventListener('load',()=>{
+  const saved = JSON.parse(localStorage.getItem('chatHistory')||'[]');
+  saved.forEach(msg=>{
+    const msgEl=document.createElement('div');
+    msgEl.className='msg '+msg.type;
+    msgEl.textContent=msg.text;
+    chat.appendChild(msgEl);
+  });
+  chat.scrollTop=chat.scrollHeight;
 });
 
 async function sendMessage(){
@@ -188,7 +204,6 @@ async function sendMessage(){
   userMsg.className='msg user';
   chat.appendChild(userMsg);
 
-  // user typing animation
   let i=0;
   function typeUser(){ if(i<text.length){ userMsg.textContent+=text[i]; i++; setTimeout(typeUser,25); chat.scrollTop=chat.scrollHeight; } }
   typeUser();
@@ -210,9 +225,21 @@ async function sendMessage(){
       botMsg.textContent='(No response from model — make sure you used a valid API key. To change yours, click the button in the top right corner.)';
     } else {
       botMsg.textContent='';
-      typeWriter(botMsg, marked.parse(data.choices?.[0]?.message?.content||'(No response from model — make sure you used a valid API key. To change yours, click the button in the top right corner.)').replace(/<\/?[^>]+(>|$)/g,""));
+      typeWriter(botMsg, decodeHtmlEntities(
+        marked.parse(data.choices?.[0]?.message?.content || 
+        '(No response from model — make sure you used a valid API key. To change yours, click the button in the top right corner.)'
+      ).replace(/<\/?[^>]+(>|$)/g,""))
+      );
     }
   }catch(err){ botMsg.textContent='Error: '+err.message; }
+  
+  // save chat
+  const chatHistory = Array.from(chat.querySelectorAll('.msg')).map(m=>({
+    text:m.textContent,
+    type:m.classList.contains('user')?'user':'bot'
+  }));
+  localStorage.setItem('chatHistory',JSON.stringify(chatHistory));
+
   chat.scrollTop=chat.scrollHeight;
   sendBtn.disabled=false;
 }
