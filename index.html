@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini San Andreas 3D</title>
+<style>
+  html,body {margin:0; height:100%; overflow:hidden; background:#111;}
+  #hud {
+    position:absolute; top:10px; left:10px;
+    background:rgba(0,0,0,0.4); color:#fff;
+    padding:10px 15px; border-radius:8px; font-family:sans-serif;
+  }
+  #hint {
+    position:absolute; bottom:10px; left:50%; transform:translateX(-50%);
+    color:#fff; font-family:sans-serif; background:rgba(0,0,0,0.4);
+    padding:6px 10px; border-radius:6px;
+  }
+  canvas {display:block;}
+</style>
+</head>
+<body>
+<div id="hud">Health: <span id="health">100</span> | Car: <span id="carMode">No</span></div>
+<div id="hint">Click to lock mouse • WASD to move • E to enter car • Space to jump</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.164/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.164/examples/js/controls/PointerLockControls.js"></script>
+<script>
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x77bbee);
+scene.fog = new THREE.Fog(0x77bbee, 50, 300);
+
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Lights
+const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+sun.position.set(100,200,100);
+scene.add(sun);
+
+// Ground
+const groundGeo = new THREE.PlaneGeometry(1000,1000);
+const groundMat = new THREE.MeshLambertMaterial({color:0x226622});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+
+// Random city
+for(let i=-200;i<200;i+=40){
+  for(let j=-200;j<200;j+=40){
+    if(Math.random() < 0.3) continue;
+    const h = 10+Math.random()*50;
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(20,h,20),
+      new THREE.MeshLambertMaterial({color:Math.random()*0xffffff})
+    );
+    box.position.set(i,h/2,j);
+    scene.add(box);
+  }
+}
+
+// Roads
+const roadMat = new THREE.MeshLambertMaterial({color:0x222222});
+for(let i=-200;i<=200;i+=40){
+  const road1 = new THREE.Mesh(new THREE.PlaneGeometry(1000,8), roadMat);
+  road1.rotation.x = -Math.PI/2;
+  road1.position.z = i;
+  scene.add(road1);
+  const road2 = new THREE.Mesh(new THREE.PlaneGeometry(8,1000), roadMat);
+  road2.rotation.x = -Math.PI/2;
+  road2.position.x = i;
+  scene.add(road2);
+}
+
+// Car
+const carGroup = new THREE.Group();
+const body = new THREE.Mesh(new THREE.BoxGeometry(6,2,12), new THREE.MeshLambertMaterial({color:0xff3333}));
+body.position.y = 2;
+carGroup.add(body);
+scene.add(carGroup);
+carGroup.position.set(0,0,0);
+
+const controls = new THREE.PointerLockControls(camera, document.body);
+document.body.addEventListener('click', ()=>controls.lock());
+scene.add(controls.getObject());
+
+let moveF=false, moveB=false, moveL=false, moveR=false, canJump=false;
+const vel = new THREE.Vector3();
+const dir = new THREE.Vector3();
+const clock = new THREE.Clock();
+let carMode = false;
+let carVel = 0;
+
+document.addEventListener('keydown', e=>{
+  switch(e.code){
+    case 'KeyW': moveF=true; break;
+    case 'KeyS': moveB=true; break;
+    case 'KeyA': moveL=true; break;
+    case 'KeyD': moveR=true; break;
+    case 'Space': if(!carMode && canJump){ vel.y=150; canJump=false;} break;
+    case 'KeyE': // enter / exit car
+      carMode = !carMode;
+      document.getElementById('carMode').innerText = carMode ? 'Yes' : 'No';
+      if(carMode){
+        camera.position.set(carGroup.position.x, carGroup.position.y+5, carGroup.position.z-10);
+      } else {
+        controls.getObject().position.copy(carGroup.position).add(new THREE.Vector3(0,4,0));
+      }
+      break;
+  }
+});
+document.addEventListener('keyup', e=>{
+  switch(e.code){
+    case 'KeyW': moveF=false; break;
+    case 'KeyS': moveB=false; break;
+    case 'KeyA': moveL=false; break;
+    case 'KeyD': moveR=false; break;
+  }
+});
+
+function animate(){
+  requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+
+  if(carMode){
+    // Simple car movement
+    if(moveF) carVel += 30*delta;
+    if(moveB) carVel -= 30*delta;
+    carVel *= 0.98;
+    carGroup.position.addScaledVector(
+      new THREE.Vector3(Math.sin(camera.rotation.y),0,Math.cos(camera.rotation.y)).negate(),
+      carVel*delta
+    );
+    camera.position.lerp(new THREE.Vector3(
+      carGroup.position.x,
+      carGroup.position.y+5,
+      carGroup.position.z-10
+    ), 0.1);
+    camera.lookAt(carGroup.position.x, carGroup.position.y+2, carGroup.position.z);
+  } else {
+    // On foot
+    const moveSpeed = 200.0;
+    const damping = 10.0;
+    const obj = controls.getObject();
+
+    dir.z = Number(moveF) - Number(moveB);
+    dir.x = Number(moveR) - Number(moveL);
+    dir.normalize();
+
+    if(moveF || moveB) vel.z -= dir.z * moveSpeed * delta;
+    if(moveL || moveR) vel.x -= dir.x * moveSpeed * delta;
+
+    vel.y -= 9.8 * 30 * delta; // gravity
+    obj.position.addScaledVector(vel, delta);
+    if(obj.position.y < 3){
+      vel.y = 0;
+      obj.position.y = 3;
+      canJump = true;
+    }
+    vel.x -= vel.x * damping * delta;
+    vel.z -= vel.z * damping * delta;
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
